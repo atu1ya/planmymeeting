@@ -1,0 +1,20 @@
+{
+  "name": "when2meet-lite",
+  "version": "1.0.0",
+  "description": "Super lightweight When2meet clone with calendar import",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ejs": "^3.1.9",
+    "better-sqlite3": "^8.4.0",
+    "node-fetch": "^3.3.2",
+    "ical": "^0.15.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
