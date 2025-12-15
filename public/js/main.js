@@ -1,3 +1,39 @@
+	// Helper: render best times (new summary version)
+	function renderBestTimesList(bestSlots) {
+		const bestTimesListDiv = document.getElementById('best-times-list');
+		if (!bestTimesListDiv) return;
+		if (!Array.isArray(bestSlots) || bestSlots.length === 0) {
+			bestTimesListDiv.innerHTML = '<div class="best-times-empty">No best times found.</div>';
+			return;
+		}
+		const list = bestSlots.map((slot, idx) => {
+			const label = `${slot.labelDay}, ${slot.labelStart} - ${slot.labelEnd} <span class="bt-count">(${slot.availableCount} available)</span>`;
+			return `<li class="bt-slot" data-day="${slot.dayIndex}" data-time="${slot.startTimeIndex}">${label}</li>`;
+		}).join('');
+		bestTimesListDiv.innerHTML = '<b>Best times:</b><ul class="bt-list" style="margin:0.5em 0 0 1em; padding:0;">' + list + '</ul>';
+		// Add click handlers
+		bestTimesListDiv.querySelectorAll('.bt-slot').forEach(function(el) {
+			el.addEventListener('click', function() {
+				const d = parseInt(el.getAttribute('data-day'), 10);
+				const t = parseInt(el.getAttribute('data-time'), 10);
+				const cell = grid.querySelector(`td.slot[data-day-index="${d}"][data-time-index="${t}"]`);
+				if (cell) {
+					cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+					cell.classList.add('bt-highlight');
+					setTimeout(() => cell.classList.remove('bt-highlight'), 1500);
+				}
+			});
+		});
+	}
+
+	// Fetch event summary (participants, totals, bestSlots)
+	function fetchEventSummary() {
+		fetch(`/events/${eventId}/summary`)
+			.then(r => r.json())
+			.then(data => {
+				if (data.bestSlots) renderBestTimesList(data.bestSlots);
+			});
+	}
 // Clear imported availability
 function clearAvailability() {
 	availabilityMatrix = Array.from({ length: numDays }, () => Array(numTimes).fill(false));
