@@ -1,0 +1,102 @@
+<% layout('layout') %>
+<div id="event-config"
+     data-event-id="<%= event.id %>"
+     data-num-days="<%= numDays %>"
+     data-num-times="<%= numTimes %>"></div>
+<div class="event-container">
+  <div class="event-left">
+    <h2><%= event.name %></h2>
+    <div class="event-dates">
+      <span><%= event.start_date %> to <%= event.end_date %></span>
+    </div>
+    <div class="event-timezone">Timezone: <%= event.timezone %></div>
+    <div class="user-controls">
+      <label for="username-input">Your name</label>
+      <input id="username-input" type="text" autocomplete="off" placeholder="Type your name">
+      <div class="button-row">
+        <button id="btn-update-schedule">Update schedule</button>
+        <button id="btn-use-calendar">Use my calendar</button>
+        <button id="btn-set-manual">Set manually</button>
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+  <div class="event-right">
+    <div class="grid-scroll">
+      <table id="availability-grid" class="availability-grid">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <% dateBlocks.forEach(function(date) { %>
+              <th><%= date.label %></th>
+            <% }); %>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (let t = 0; t < timeBlocks.length; t++) { %>
+            <tr>
+              <td><%= timeBlocks[t].label %></td>
+              <% for (let d = 0; d < dateBlocks.length; d++) { %>
+                <td class="slot" data-day-index="<%= d %>" data-time-index="<%= t %>"></td>
+              <% } %>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <div id="best-times" class="best-times"></div>
+  </div>
+</div>
+
+<!-- Calendar modal overlay -->
+<div id="calendar-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Import from calendar</h3>
+    <input id="calendar-link-input" type="url" placeholder="Paste calendar subscription link (ICS)">
+    <div style="margin: 0.5em 0;">or</div>
+    <input id="calendar-file-input" type="file" accept=".ics">
+    <div class="modal-buttons">
+      <button id="calendar-submit">Import</button>
+      <button id="calendar-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.event-container {
+  display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; align-items: flex-start; margin: 0 auto; max-width: 1100px;
+}
+.event-left {
+  flex: 1 1 260px; min-width: 240px; max-width: 320px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 1.5rem 1.2rem; margin-bottom: 2rem;
+}
+.event-right {
+  flex: 2 1 400px; min-width: 260px; max-width: 700px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 1.5rem 1.2rem; overflow-x: auto;
+}
+.event-left h2 { margin-top: 0; }
+.event-dates, .event-timezone { margin-bottom: 0.7em; color: #555; }
+.user-controls { margin-top: 1.5em; }
+#username-input { width: 100%; font-size: 1.1em; margin-bottom: 0.7em; padding: 0.4em; border-radius: 4px; border: 1px solid #ccc; }
+.button-row { display: flex; gap: 0.5em; margin-bottom: 0.7em; }
+.button-row button { flex: 1 1 0; font-size: 1em; padding: 0.5em; border-radius: 4px; border: none; background: #2d7cff; color: #fff; font-weight: bold; cursor: pointer; }
+.button-row button:hover { background: #1a5dcc; }
+.status { min-height: 1.2em; color: #1a5dcc; font-size: 0.98em; margin-top: 0.5em; }
+.grid-scroll { overflow-x: auto; }
+.availability-grid { border-collapse: collapse; width: 100%; min-width: 350px; }
+.availability-grid th, .availability-grid td { border: 1px solid #ddd; padding: 0.3em 0.5em; text-align: center; }
+.availability-grid th { background: #f5f5f5; font-weight: bold; }
+.availability-grid td.slot { cursor: pointer; min-width: 36px; height: 32px; background: #f8faff; transition: background 0.2s; }
+.availability-grid td.slot.selected { background: #2d7cff33; }
+.availability-grid td.slot.available { background: #2d7cff88; }
+.availability-grid td.slot.unavailable { background: #f8faff; }
+.best-times { margin-top: 1.5em; font-size: 1.1em; color: #222; }
+@media (max-width: 900px) {
+  .event-container { flex-direction: column; align-items: stretch; }
+  .event-right, .event-left { max-width: 100%; }
+}
+/* Modal styles */
+.modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0006; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: #fff; border-radius: 8px; padding: 2em 1.5em; box-shadow: 0 2px 16px #0002; min-width: 260px; max-width: 90vw; display: flex; flex-direction: column; gap: 1em; align-items: stretch; }
+.modal-buttons { display: flex; gap: 0.5em; justify-content: flex-end; }
+.modal-buttons button { font-size: 1em; padding: 0.5em 1.2em; border-radius: 4px; border: none; background: #2d7cff; color: #fff; font-weight: bold; cursor: pointer; }
+.modal-buttons button:hover { background: #1a5dcc; }
+</style>

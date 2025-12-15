@@ -1,2 +1,46 @@
 <% layout('layout') %>
-Hello
+<div class="center-form">
+	<form class="event-form" action="/events" method="POST">
+		<h2>Create a new event</h2>
+		<% if (typeof error === 'string' && error) { %>
+			<div class="form-error"><%= error %></div>
+		<% } %>
+		<label>
+			Event name<br>
+			<input type="text" name="name" required autocomplete="off">
+		</label>
+		<label>
+			Start date<br>
+			<input type="date" name="start_date" required>
+		</label>
+		<label>
+			End date<br>
+			<input type="date" name="end_date" required>
+		</label>
+		<label>
+			Earliest time<br>
+			<input type="time" name="min_time" required>
+		</label>
+		<label>
+			Latest time<br>
+			<input type="time" name="max_time" required>
+		</label>
+		<label>
+			Timezone<br>
+			<input type="text" name="timezone" placeholder="e.g. America/New_York" required>
+		</label>
+		<button type="submit">Create event</button>
+	</form>
+</div>
+<style>
+.center-form { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+.event-form {
+	background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2rem 2.5rem; display: flex; flex-direction: column; gap: 1rem; min-width: 260px; max-width: 350px; width: 100%;
+}
+.event-form h2 { margin: 0 0 0.5rem 0; text-align: center; }
+.event-form label { display: flex; flex-direction: column; font-size: 1rem; }
+.event-form input, .event-form select { font-size: 1rem; padding: 0.4em; border-radius: 4px; border: 1px solid #ccc; margin-top: 0.2em; }
+.event-form button { margin-top: 1rem; font-size: 1.1rem; padding: 0.5em; border-radius: 4px; border: none; background: #2d7cff; color: #fff; font-weight: bold; cursor: pointer; }
+.event-form button:hover { background: #1a5dcc; }
+.form-error { color: #b00; background: #fee; border: 1px solid #fbb; border-radius: 4px; padding: 0.5em; margin-bottom: 0.5em; text-align: center; }
+</style>
