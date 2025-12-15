@@ -3,24 +3,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// Placeholder for timeBlocks utilities
-function getDateBlocks(event) {
-  // For now, just return 3 days
-  return [
-    { dayIndex: 0, label: 'Day 1' },
-    { dayIndex: 1, label: 'Day 2' },
-    { dayIndex: 2, label: 'Day 3' }
-  ];
-}
-function getTimeBlocks(event) {
-  // For now, just return 4 times
-  return [
-    { timeIndex: 0, label: '09:00' },
-    { timeIndex: 1, label: '10:00' },
-    { timeIndex: 2, label: '11:00' },
-    { timeIndex: 3, label: '12:00' }
-  ];
-}
+const timeBlocksUtil = require('../utils/timeBlocks');
 
 // GET / - render home.ejs with event creation form
 router.get('/', (req, res) => {
@@ -53,15 +36,17 @@ router.post('/events', (req, res) => {
 router.get('/events/:id', (req, res) => {
   const event = db.getEventById(req.params.id);
   if (!event) return res.status(404).send('Event not found');
-  // Use placeholder dateBlocks and timeBlocks
-  const dateBlocks = getDateBlocks(event);
-  const timeBlocks = getTimeBlocks(event);
+  // Use timeBlocks utility
+  const gridConfig = timeBlocksUtil.buildGridConfig(event);
+  const { dateBlocks, timeBlocks, numDays, numTimes } = gridConfig;
   // Empty mergedAvailability matrix
-  const mergedAvailability = Array.from({ length: dateBlocks.length }, () => Array(timeBlocks.length).fill(0));
+  const mergedAvailability = Array.from({ length: numDays }, () => Array(numTimes).fill(0));
   res.render('event', {
     event,
     dateBlocks,
     timeBlocks,
+    numDays,
+    numTimes,
     mergedAvailability
   });
 });
