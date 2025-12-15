@@ -400,75 +400,70 @@ window.addEventListener('DOMContentLoaded', function() {
 		if (calendarLinkInput) calendarLinkInput.value = '';
 	}
 
-	// Calendar submit
-	function submitCalendar() {
-		if (!participantId) {
-			setStatus('Please enter your name first.', true);
-			hideModal();
-			return;
+	// Helper: get heat level (0-7) from ratio
+	function getHeatLevel(ratio) {
+		if (ratio >= 0.99) return 7;
+		if (ratio >= 0.85) return 6;
+		if (ratio >= 0.7) return 5;
+		if (ratio >= 0.55) return 4;
+		if (ratio >= 0.4) return 3;
+		if (ratio >= 0.25) return 2;
+		if (ratio > 0) return 1;
+		return 0;
+	}
+
+	// Store latest heatmap data
+	let latestTotalsPerCell = null;
+	let latestTotalParticipants = 1;
+
+	// Helper: render grid from matrix with heatmap
+	function renderGridFromMatrix() {
+		if (!grid) return;
+		for (let t = 0; t < numTimes; t++) {
+			for (let d = 0; d < numDays; d++) {
+				const cell = grid.querySelector(`td.slot[data-day-index="${d}"][data-time-index="${t}"]`);
+				if (cell) {
+					// Remove old heat classes
+					for (let k = 0; k <= 7; k++) cell.classList.remove('heat-' + k);
+					// Compute heat level
+					let ratio = 0;
+					if (latestTotalsPerCell && latestTotalsPerCell[d] && typeof latestTotalsPerCell[d][t] === 'number') {
+						ratio = latestTotalsPerCell[d][t] / Math.max(latestTotalParticipants, 1);
+					}
+					const heat = getHeatLevel(ratio);
+					cell.classList.add('heat-' + heat);
+					// User selection
+					cell.classList.toggle('available', !!availabilityMatrix[d][t]);
+				}
+			}
 		}
-		const url = calendarLinkInput.value.trim();
-		if (!url) {
-			setStatus('Please enter a calendar link.', true);
-			return;
-		}
-		setStatus('Importing calendar...');
-		fetch(`/events/${eventId}/participants/${participantId}/calendar`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ calendar_link_url: url })
-		})
+	}
+
+	// Fetch event summary (participants, totals, bestSlots, cellParticipants)
+	function fetchEventSummary() {
+		fetch(`/events/${eventId}/summary`)
 			.then(r => r.json())
 			.then(data => {
-				if (data.availabilityMatrix) {
-					setMatrixFromResponse(data.availabilityMatrix);
-					renderGridFromMatrix();
-					setStatus('Calendar imported!');
-					hideModal();
-					saveAvailability();
-				} else {
-					setStatus(data.error || 'Failed to import calendar', true);
+				if (data.bestSlots) renderBestTimesList(data.bestSlots);
+				if (data.cellParticipants) {
+					tooltipData = {};
+					for (const key in data.cellParticipants) {
+						tooltipData[key] = {
+							available: data.cellParticipants[key].available,
+							unavailable: data.cellParticipants[key].unavailable,
+							total: (data.cellParticipants[key].available.length + data.cellParticipants[key].unavailable.length)
+						};
+					}
 				}
-			})
-			.catch(() => setStatus('Failed to import calendar', true));
+				if (data.totalsPerCell && Array.isArray(data.totalsPerCell)) {
+					latestTotalsPerCell = data.totalsPerCell;
+				}
+				if (data.participants && Array.isArray(data.participants)) {
+					latestTotalParticipants = data.participants.length;
+				}
+				renderGridFromMatrix();
+			});
 	}
-
-	// Attach event handlers
-	// (btnUpdate removed)
-	// (btnManual removed)
-	if (btnCalendar) btnCalendar.addEventListener('click', function(e) {
-		e.preventDefault();
-		if (!participantId) {
-			createOrLoadParticipant(() => showModal());
-		} else {
-			showModal();
-		}
-	});
-	if (calendarSubmit) calendarSubmit.addEventListener('click', function(e) {
-		e.preventDefault();
-		submitCalendar();
-	});
-	if (calendarCancel) calendarCancel.addEventListener('click', function(e) {
-		e.preventDefault();
-		hideModal();
-	});
-
-
-	// Unified pointer events for click-to-toggle and drag-to-paint
-	let dragMode = false;
-	let dragTargetState = null;
-	let lastDragCell = null;
-	function toggleCell(d, t) {
-		availabilityMatrix[d][t] = !availabilityMatrix[d][t];
-		renderGridFromMatrix();
-	}
-	function setCellState(d, t, state) {
-		availabilityMatrix[d][t] = state;
-		renderGridFromMatrix();
-	}
-	if (grid) {
-		grid.addEventListener('pointerdown', function(e) {
-			const cell = e.target.closest('.slot');
 			if (!cell) return;
 			e.preventDefault();
 			const d = parseInt(cell.getAttribute('data-day-index'), 10);
@@ -548,7 +543,24 @@ window.addEventListener('DOMContentLoaded', function() {
 	@media (max-width: 600px) { .cell-tooltip { font-size: 0.98em; min-width: 120px; } }`;
 	document.head.appendChild(tooltipStyle);
 
+	// Heatmap CSS
+	const heatmapStyle = document.createElement('style');
+	heatmapStyle.innerHTML = `
+	.availability-grid td.slot { transition: background 0.18s; position: relative; }
+	.heat-0 { background: #f8faff; }
+	.heat-1 { background: #e6f0ff; }
+	.heat-2 { background: #c7e0ff; }
+	.heat-3 { background: #a5d0ff; }
+	.heat-4 { background: #7bbcff; }
+	.heat-5 { background: #4fa6ff; }
+	.heat-6 { background: #218fff; }
+	.heat-7 { background: #006be6; }
+	.availability-grid td.slot.available { outline: 2.5px solid #2d7cff; box-shadow: 0 0 0 2px #fff inset; z-index: 1; }
+	.availability-grid td.slot.available.heat-7 { outline: 2.5px solid #fff; box-shadow: 0 0 0 2px #2d7cff inset; }
+	`;
+	document.head.appendChild(heatmapStyle);
+
 	// Initial render
 	renderGridFromMatrix();
-	refreshMergedAvailability();
+	fetchEventSummary();
 })();
