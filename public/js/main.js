@@ -156,24 +156,92 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // Main JS for planmymeeting event page
+
 (function() {
-	// Elements
-	const configDiv = document.getElementById('event-config');
-	if (!configDiv) return;
-	const eventId = configDiv.getAttribute('data-event-id');
-	const numDays = parseInt(configDiv.getAttribute('data-num-days'), 10);
-	const numTimes = parseInt(configDiv.getAttribute('data-num-times'), 10);
-	const usernameInput = document.getElementById('username-input');
-	// const btnUpdate = document.getElementById('btn-update-schedule');
-	const btnCalendar = document.getElementById('btn-use-calendar');
-	// const btnManual = document.getElementById('btn-set-manual');
-	const grid = document.getElementById('availability-grid');
-	const statusDiv = document.getElementById('status');
-	const bestTimesDiv = document.getElementById('best-times');
-	const modal = document.getElementById('calendar-modal');
-	const calendarLinkInput = document.getElementById('calendar-link-input');
-	const calendarSubmit = document.getElementById('calendar-submit');
-	const calendarCancel = document.getElementById('calendar-cancel');
+	 // Elements
+	 const configDiv = document.getElementById('event-config');
+	 // --- Event Creation Form Enhancements ---
+	 const todayBtn = document.getElementById('today-btn');
+	 const startDateInput = document.getElementById('start-date-input');
+	 const endDateInput = document.getElementById('end-date-input');
+	 const minTimeInput = document.getElementById('min-time-input');
+	 const maxTimeInput = document.getElementById('max-time-input');
+
+	 if (todayBtn && startDateInput && endDateInput) {
+		 todayBtn.addEventListener('click', function(e) {
+			 e.preventDefault();
+			 const now = new Date();
+			 const yyyy = now.getFullYear();
+			 const mm = String(now.getMonth() + 1).padStart(2, '0');
+			 const dd = String(now.getDate()).padStart(2, '0');
+			 const todayStr = `${yyyy}-${mm}-${dd}`;
+			 startDateInput.value = todayStr;
+			 // If end date is empty or before start, set to start
+			 if (!endDateInput.value || endDateInput.value < todayStr) {
+				 endDateInput.value = todayStr;
+			 }
+			 // Trigger input events for validation/UI
+			 startDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+			 endDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+		 });
+	 }
+
+	 // Time input min/max logic
+	 if (minTimeInput && maxTimeInput) {
+		 minTimeInput.addEventListener('input', function() {
+			 if (maxTimeInput.value && minTimeInput.value > maxTimeInput.value) {
+				 maxTimeInput.value = minTimeInput.value;
+				 maxTimeInput.dispatchEvent(new Event('input', { bubbles: true }));
+			 }
+			 maxTimeInput.min = minTimeInput.value;
+		 });
+		 maxTimeInput.addEventListener('input', function() {
+			 minTimeInput.max = maxTimeInput.value;
+		 });
+	 }
+
+	 // --- Event Page Share Link ---
+	 const shareInput = document.getElementById('share-link-input');
+	 const copyBtn = document.getElementById('copy-link-btn');
+	 if (shareInput && copyBtn) {
+		 copyBtn.addEventListener('click', function() {
+			 // Try navigator.clipboard first
+			 if (navigator.clipboard && window.isSecureContext) {
+				 navigator.clipboard.writeText(shareInput.value).then(() => {
+					 copyBtn.textContent = 'Copied!';
+					 setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+				 }, () => fallbackCopy());
+			 } else {
+				 fallbackCopy();
+			 }
+			 function fallbackCopy() {
+				 shareInput.select();
+				 shareInput.setSelectionRange(0, 99999);
+				 try {
+					 document.execCommand('copy');
+					 copyBtn.textContent = 'Copied!';
+					 setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+				 } catch (err) {}
+			 }
+		 });
+	 }
+
+	 // --- Existing event page logic ---
+	 if (!configDiv) return;
+	 const eventId = configDiv.getAttribute('data-event-id');
+	 const numDays = parseInt(configDiv.getAttribute('data-num-days'), 10);
+	 const numTimes = parseInt(configDiv.getAttribute('data-num-times'), 10);
+	 const usernameInput = document.getElementById('username-input');
+	 // const btnUpdate = document.getElementById('btn-update-schedule');
+	 const btnCalendar = document.getElementById('btn-use-calendar');
+	 // const btnManual = document.getElementById('btn-set-manual');
+	 const grid = document.getElementById('availability-grid');
+	 const statusDiv = document.getElementById('status');
+	 const bestTimesDiv = document.getElementById('best-times');
+	 const modal = document.getElementById('calendar-modal');
+	 const calendarLinkInput = document.getElementById('calendar-link-input');
+	 const calendarSubmit = document.getElementById('calendar-submit');
+	 const calendarCancel = document.getElementById('calendar-cancel');
 
 	// State
 	let availabilityMatrix = Array.from({ length: numDays }, () => Array(numTimes).fill(false));

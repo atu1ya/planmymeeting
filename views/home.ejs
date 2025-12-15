@@ -13,22 +13,27 @@
 			Host name<br>
 			<input type="text" name="host_name" required autocomplete="off" maxlength="40">
 		</label>
-		<label>
-			Start date<br>
-			<input type="date" name="start_date" required>
-		</label>
-		<label>
-			End date<br>
-			<input type="date" name="end_date" required>
-		</label>
-		<label>
-			Earliest time<br>
-			<input type="time" name="min_time" required>
-		</label>
-		<label>
-			Latest time<br>
-			<input type="time" name="max_time" required>
-		</label>
+		   <label>
+			   Start date<br>
+			   <div style="display:flex;align-items:center;gap:0.5em;">
+				   <input type="date" name="start_date" id="start-date-input" required>
+				   <button type="button" id="today-btn" style="padding:0.3em 0.8em;font-size:0.98em;">Today</button>
+			   </div>
+		   </label>
+		   <label>
+			   End date<br>
+			   <input type="date" name="end_date" id="end-date-input" required>
+		   </label>
+		   <label>
+			   Earliest time<br>
+			   <input type="time" name="min_time" id="min-time-input" required pattern="[0-9]{2}:[0-9]{2}" inputmode="numeric">
+			   <span style="font-size:0.95em;color:#888;">(24-hour)</span>
+		   </label>
+		   <label>
+			   Latest time<br>
+			   <input type="time" name="max_time" id="max-time-input" required pattern="[0-9]{2}:[0-9]{2}" inputmode="numeric">
+			   <span style="font-size:0.95em;color:#888;">(24-hour)</span>
+		   </label>
 		<label>
 			Timezone<br>
 			<input type="text" name="timezone" placeholder="e.g. America/New_York" required>
