@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for planmymeeting on 2025-12-15T01:36:51Z
+# fly.toml app configuration file generated for planmymeeting on 2025-12-15T01:45:24Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'planmymeeting'
-primary_region = 'syd'
+primary_region = 'iad'
 
 [build]
 
