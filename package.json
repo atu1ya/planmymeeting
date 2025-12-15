@@ -12,7 +12,7 @@
     "ejs": "^3.1.9",
     "better-sqlite3": "^8.4.0",
     "node-fetch": "^3.3.2",
-    "ical": "^0.15.0"
+    "ical": "^0.8.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
