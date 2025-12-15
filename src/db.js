@@ -1,10 +1,19 @@
 // src/db.js
+
 const path = require('path');
+const fs = require('fs');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 
+// Determine DB path from env or fallback
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data.db');
+// Ensure parent directory exists
+const parentDir = path.dirname(DB_PATH);
+if (!fs.existsSync(parentDir)) {
+  fs.mkdirSync(parentDir, { recursive: true });
+}
 // Open or create the database file
-const db = new Database(path.join(__dirname, '../data.db'));
+const db = new Database(DB_PATH);
 
 // Create tables if they do not exist
 db.exec(`
@@ -155,6 +164,11 @@ function getAllAvailabilityForEvent(eventId, numDays, numTimes) {
   };
 }
 
+// Export close method for graceful shutdown
+function close() {
+  try { db.close(); } catch (e) {}
+}
+
 module.exports = {
   createEvent,
   getEventById,
@@ -163,5 +177,6 @@ module.exports = {
   saveParticipantCalendarLink,
   saveAvailabilityMatrix,
   getAvailabilityMatrixForParticipant,
-  getAllAvailabilityForEvent
+  getAllAvailabilityForEvent,
+  close
 };
