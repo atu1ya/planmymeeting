@@ -148,26 +148,55 @@ function getAvailabilityMatrixForParticipant(participantId, numDays, numTimes) {
 
 
 // Get all participants and merged availability matrix for an event
-function getAllAvailabilityForEvent(eventId, numDays, numTimes) {
+function getAllAvailabilityForEvent(eventId, numDays, numTimes, withNames) {
   // Get participants
   const participants = listParticipantsForEvent(eventId);
+  // Map participantId to username
+  const idToName = {};
+  for (const p of participants) idToName[p.id] = p.username;
   // Initialize merged matrix
   const merged = Array.from({ length: numDays }, () => Array(numTimes).fill(0));
+  // Optionally, build per-cell participant lists
+  let cellParticipants = undefined;
+  if (withNames) {
+    cellParticipants = {};
+    for (let d = 0; d < numDays; d++) {
+      for (let t = 0; t < numTimes; t++) {
+        cellParticipants[`${d},${t}`] = { available: [], unavailable: [] };
+      }
+    }
+  }
   // For each participant, add their availability
   const stmt = db.prepare('SELECT id FROM participants WHERE event_id = ?');
   const participantRows = stmt.all(eventId);
   const availStmt = db.prepare('SELECT day_index, time_index, is_available FROM availability WHERE participant_id = ?');
   for (const p of participantRows) {
     const rows = availStmt.all(p.id);
+    // Build a quick lookup for this participant's available cells
+    const availableSet = new Set();
     for (const row of rows) {
       if (row.day_index < numDays && row.time_index < numTimes && row.is_available) {
         merged[row.day_index][row.time_index] += 1;
+        availableSet.add(`${row.day_index},${row.time_index}`);
+      }
+    }
+    if (withNames) {
+      for (let d = 0; d < numDays; d++) {
+        for (let t = 0; t < numTimes; t++) {
+          const key = `${d},${t}`;
+          if (availableSet.has(key)) {
+            cellParticipants[key].available.push(idToName[p.id] || '');
+          } else {
+            cellParticipants[key].unavailable.push(idToName[p.id] || '');
+          }
+        }
       }
     }
   }
   return {
     participants,
-    mergedAvailability: merged
+    mergedAvailability: merged,
+    cellParticipants
   };
 }
 

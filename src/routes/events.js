@@ -6,7 +6,7 @@ router.get('/events/:id/summary', (req, res) => {
   const bestTimesUtil = require('../utils/bestTimes');
   const gridConfig = timeBlocksUtil.buildGridConfig(event);
   const { dateBlocks, timeBlocks, numDays, numTimes } = gridConfig;
-  const { participants, mergedAvailability } = db.getAllAvailabilityForEvent(event.id, numDays, numTimes);
+  const { participants, mergedAvailability, cellParticipants } = db.getAllAvailabilityForEvent(event.id, numDays, numTimes, true);
   // Compute totals per cell (availability counts)
   const totalsPerCell = mergedAvailability;
   // Compute best slots (top 5)
@@ -21,7 +21,8 @@ router.get('/events/:id/summary', (req, res) => {
   res.json({
     participants,
     totalsPerCell,
-    bestSlots
+    bestSlots,
+    cellParticipants // { ["d,t"]: { available: [names], unavailable: [names] } }
   });
 });
 // src/routes/events.js

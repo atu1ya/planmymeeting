@@ -1,3 +1,65 @@
+			// Tooltip for cell availability
+			let cellTooltip = null;
+			let tooltipData = {};
+
+			function hideTooltip() {
+				if (cellTooltip) {
+					cellTooltip.remove();
+					cellTooltip = null;
+				}
+			}
+
+			function showTooltipForCell(d, t, cell) {
+				hideTooltip();
+				const key = `${d},${t}`;
+				const data = tooltipData[key];
+				if (!data) return;
+				cellTooltip = document.createElement('div');
+				cellTooltip.className = 'cell-tooltip';
+				cellTooltip.innerHTML = `<div class="ct-header"><b>${data.available.length} / ${data.total} available</b></div>` +
+					`<div class="ct-list"><span class="ct-label">Available:</span> ${data.available.length ? data.available.join(', ') : '<i>None</i>'}</div>` +
+					`<div class="ct-list ct-unavail-collapsed"><span class="ct-label">Unavailable:</span> <span class="ct-unavail-names" style="display:none;">${data.unavailable.length ? data.unavailable.join(', ') : '<i>None</i>'}</span> <button class="ct-toggle">Show</button></div>`;
+				document.body.appendChild(cellTooltip);
+				// Position
+				const rect = cell.getBoundingClientRect();
+				cellTooltip.style.position = 'fixed';
+				cellTooltip.style.left = (rect.left + rect.width/2) + 'px';
+				cellTooltip.style.top = (rect.top - 8) + 'px';
+				cellTooltip.style.zIndex = 10000;
+				// Toggle unavailable
+				const toggleBtn = cellTooltip.querySelector('.ct-toggle');
+				const unavailNames = cellTooltip.querySelector('.ct-unavail-names');
+				let expanded = false;
+				toggleBtn.addEventListener('click', function(e) {
+					e.stopPropagation();
+					expanded = !expanded;
+					unavailNames.style.display = expanded ? '' : 'none';
+					toggleBtn.textContent = expanded ? 'Hide' : 'Show';
+				});
+				// Mobile tap outside
+				setTimeout(() => {
+					document.addEventListener('touchstart', hideTooltip, { once: true });
+				}, 0);
+			}
+
+			// Fetch event summary (participants, totals, bestSlots, cellParticipants)
+			function fetchEventSummary() {
+				fetch(`/events/${eventId}/summary`)
+					.then(r => r.json())
+					.then(data => {
+						if (data.bestSlots) renderBestTimesList(data.bestSlots);
+						if (data.cellParticipants) {
+							tooltipData = {};
+							for (const key in data.cellParticipants) {
+								tooltipData[key] = {
+									available: data.cellParticipants[key].available,
+									unavailable: data.cellParticipants[key].unavailable,
+									total: (data.cellParticipants[key].available.length + data.cellParticipants[key].unavailable.length)
+								};
+							}
+						}
+					});
+			}
 		// Helper: render best times (new summary version)
 		function renderBestTimesList(bestSlots) {
 			const bestTimesListDiv = document.getElementById('best-times-list');
@@ -392,9 +454,24 @@ window.addEventListener('DOMContentLoaded', function() {
 	});
 
 
-	// Grid cell handlers with auto-save
+	// Grid cell handlers with auto-save and tooltip
 	if (grid) {
 		grid.addEventListener('click', function(e) {
+			const cell = e.target.closest('.slot');
+			if (cell) {
+				const d = parseInt(cell.getAttribute('data-day-index'), 10);
+				const t = parseInt(cell.getAttribute('data-time-index'), 10);
+				if ('ontouchstart' in window) {
+					// Mobile: tap toggles tooltip
+					if (cellTooltip) {
+						hideTooltip();
+					} else {
+						showTooltipForCell(d, t, cell);
+					}
+				} else {
+					hideTooltip();
+				}
+			}
 			onCellClick(e);
 			saveAvailabilityDebounced();
 		});
@@ -403,11 +480,30 @@ window.addEventListener('DOMContentLoaded', function() {
 			saveAvailabilityDebounced();
 		});
 		grid.addEventListener('mouseover', function(e) {
+			const cell = e.target.closest('.slot');
+			if (cell && !('ontouchstart' in window)) {
+				const d = parseInt(cell.getAttribute('data-day-index'), 10);
+				const t = parseInt(cell.getAttribute('data-time-index'), 10);
+				showTooltipForCell(d, t, cell);
+			}
 			onCellMouseOver(e);
 			if (isMouseDown) saveAvailabilityDebounced();
 		});
+		grid.addEventListener('mouseout', function(e) {
+			if (!('ontouchstart' in window)) hideTooltip();
+		});
 		document.addEventListener('mouseup', onMouseUp);
 	}
+	// Tooltip styles
+	const tooltipStyle = document.createElement('style');
+	tooltipStyle.innerHTML = `.cell-tooltip { background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 2px 8px #0002; padding: 0.7em 1em; font-size: 1em; min-width: 180px; max-width: 320px; pointer-events: auto; }
+	.cell-tooltip .ct-header { font-size: 1.08em; margin-bottom: 0.3em; color: #1a5dcc; }
+	.cell-tooltip .ct-label { font-weight: bold; color: #333; }
+	.cell-tooltip .ct-list { margin-bottom: 0.2em; }
+	.cell-tooltip .ct-unavail-collapsed { margin-top: 0.2em; }
+	.cell-tooltip .ct-toggle { background: none; border: none; color: #2d7cff; cursor: pointer; font-size: 0.98em; margin-left: 0.5em; }
+	@media (max-width: 600px) { .cell-tooltip { font-size: 0.98em; min-width: 120px; } }`;
+	document.head.appendChild(tooltipStyle);
 
 	// Initial render
 	renderGridFromMatrix();
