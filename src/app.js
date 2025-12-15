@@ -8,7 +8,8 @@ const db = require('./db');
 
 const app = express();
 
-// Set EJS as the view engine
+// Set up EJS with ejs-mate for layout support
+app.engine('ejs', require('ejs-mate'));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
