@@ -454,31 +454,73 @@ window.addEventListener('DOMContentLoaded', function() {
 	});
 
 
-	// Grid cell handlers with auto-save and tooltip
+	// Unified pointer events for click-to-toggle and drag-to-paint
+	let dragMode = false;
+	let dragTargetState = null;
+	let lastDragCell = null;
+	function toggleCell(d, t) {
+		availabilityMatrix[d][t] = !availabilityMatrix[d][t];
+		renderGridFromMatrix();
+	}
+	function setCellState(d, t, state) {
+		availabilityMatrix[d][t] = state;
+		renderGridFromMatrix();
+	}
 	if (grid) {
-		grid.addEventListener('click', function(e) {
+		grid.addEventListener('pointerdown', function(e) {
 			const cell = e.target.closest('.slot');
-			if (cell) {
-				const d = parseInt(cell.getAttribute('data-day-index'), 10);
-				const t = parseInt(cell.getAttribute('data-time-index'), 10);
-				if ('ontouchstart' in window) {
-					// Mobile: tap toggles tooltip
-					if (cellTooltip) {
-						hideTooltip();
-					} else {
-						showTooltipForCell(d, t, cell);
-					}
-				} else {
+			if (!cell) return;
+			e.preventDefault();
+			const d = parseInt(cell.getAttribute('data-day-index'), 10);
+			const t = parseInt(cell.getAttribute('data-time-index'), 10);
+			// Tooltip logic
+			if (e.pointerType === 'touch') {
+				if (cellTooltip) {
 					hideTooltip();
+				} else {
+					showTooltipForCell(d, t, cell);
 				}
+			} else {
+				hideTooltip();
 			}
-			onCellClick(e);
+			// Drag logic
+			dragMode = true;
+			dragTargetState = !availabilityMatrix[d][t];
+			setCellState(d, t, dragTargetState);
+			lastDragCell = `${d},${t}`;
 			saveAvailabilityDebounced();
 		});
-		grid.addEventListener('mousedown', function(e) {
-			onCellMouseDown(e);
+		grid.addEventListener('pointerenter', function(e) {
+			if (!dragMode) return;
+			const cell = e.target.closest('.slot');
+			if (!cell) return;
+			const d = parseInt(cell.getAttribute('data-day-index'), 10);
+			const t = parseInt(cell.getAttribute('data-time-index'), 10);
+			const key = `${d},${t}`;
+			if (key !== lastDragCell) {
+				setCellState(d, t, dragTargetState);
+				lastDragCell = key;
+				saveAvailabilityDebounced();
+			}
+		}, true);
+		document.addEventListener('pointerup', function(e) {
+			if (dragMode) {
+				dragMode = false;
+				dragTargetState = null;
+				lastDragCell = null;
+			}
+		});
+		// Single tap/click toggles cell if not dragging
+		grid.addEventListener('click', function(e) {
+			if (dragMode) return;
+			const cell = e.target.closest('.slot');
+			if (!cell) return;
+			const d = parseInt(cell.getAttribute('data-day-index'), 10);
+			const t = parseInt(cell.getAttribute('data-time-index'), 10);
+			toggleCell(d, t);
 			saveAvailabilityDebounced();
 		});
+		// Tooltip on hover (desktop)
 		grid.addEventListener('mouseover', function(e) {
 			const cell = e.target.closest('.slot');
 			if (cell && !('ontouchstart' in window)) {
@@ -486,14 +528,15 @@ window.addEventListener('DOMContentLoaded', function() {
 				const t = parseInt(cell.getAttribute('data-time-index'), 10);
 				showTooltipForCell(d, t, cell);
 			}
-			onCellMouseOver(e);
-			if (isMouseDown) saveAvailabilityDebounced();
 		});
 		grid.addEventListener('mouseout', function(e) {
 			if (!('ontouchstart' in window)) hideTooltip();
 		});
-		document.addEventListener('mouseup', onMouseUp);
 	}
+		// Prevent unwanted selection/dragging
+		const gridStyle = document.createElement('style');
+		gridStyle.innerHTML = `.availability-grid, .availability-grid td { user-select: none; -webkit-user-select: none; -ms-user-select: none; touch-action: none; }`;
+		document.head.appendChild(gridStyle);
 	// Tooltip styles
 	const tooltipStyle = document.createElement('style');
 	tooltipStyle.innerHTML = `.cell-tooltip { background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 2px 8px #0002; padding: 0.7em 1em; font-size: 1em; min-width: 180px; max-width: 320px; pointer-events: auto; }
