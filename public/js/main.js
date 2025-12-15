@@ -86,7 +86,12 @@
 			bestTimesDiv.textContent = 'No best times found.';
 			return;
 		}
-		bestTimesDiv.innerHTML = '<b>Best times:</b> ' + bestTimes.map(bt => bt.label).join(', ');
+		// Format: "Tue 12, 10:00 - 10:30 (5 of 7 available)"
+		const list = bestTimes.map(bt => {
+			const label = `${bt.labelDay}, ${bt.labelStart} - ${bt.labelEnd} (${bt.availableCount} available${typeof window.participantCount === 'number' ? ' of ' + window.participantCount : ''})`;
+			return `<li>${label}</li>`;
+		}).join('');
+		bestTimesDiv.innerHTML = '<b>Best times:</b><ul style="margin:0.5em 0 0 1em; padding:0;">' + list + '</ul>';
 	}
 
 	// Fetch merged availability and best times

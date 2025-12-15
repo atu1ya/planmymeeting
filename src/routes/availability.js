@@ -19,14 +19,29 @@ router.post('/participants/:participantId/availability', express.json(), (req, r
   }
 });
 
-// GET /availability - get merged availability and participants
+// GET /availability - get merged availability, participants, and best times
 router.get('/availability', (req, res) => {
   const eventId = req.params.id;
-  // For now, use 3x4 matrix as in events.js placeholder
-  const numDays = 3, numTimes = 4;
   try {
+    // Get event info for grid config
+    const dbEvent = require('../db');
+    const event = dbEvent.getEventById(eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const timeBlocksUtil = require('../utils/timeBlocks');
+    const bestTimesUtil = require('../utils/bestTimes');
+    const gridConfig = timeBlocksUtil.buildGridConfig(event);
+    const { dateBlocks, timeBlocks, numDays, numTimes } = gridConfig;
     const { mergedAvailability, participants } = db.getAllAvailabilityForEvent(eventId, numDays, numTimes);
-    return res.json({ mergedAvailability, participants });
+    const participantCount = participants.length;
+    const bestTimes = bestTimesUtil.findBestTimes({
+      mergedAvailability,
+      meetingDurationMinutes: 30,
+      intervalMinutes: 30,
+      dateBlocks,
+      timeBlocks,
+      participantCount
+    });
+    return res.json({ mergedAvailability, participants, bestTimes });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Server error loading availability' });
