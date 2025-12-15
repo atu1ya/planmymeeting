@@ -1,5 +1,5 @@
 // src/utils/icsParser.js
-const ical = require('ical');
+const ical = require('node-ical');
 const { DateTime, Interval } = require('luxon');
 
 // Helper: parse time string "HH:MM" to minutes from midnight
@@ -41,8 +41,16 @@ function buildAvailabilityFromICS(options) {
   // busyMatrix: true = busy
   const busyMatrix = Array.from({ length: numDays }, () => Array(numTimes).fill(false));
 
-  // Parse ICS
-  const events = ical.parseICS(icsText);
+
+  // Parse ICS with guard
+  let events = {};
+  try {
+    events = ical.parseICS(icsText);
+  } catch (err) {
+    console.error('ICS parse error:', err && err.message ? err.message : err);
+    // Return all free if ICS is bad
+    return Array.from({ length: numDays }, () => Array(numTimes).fill(true));
+  }
   for (const k in events) {
     const ev = events[k];
     if (!ev || ev.type !== 'VEVENT' || !ev.start || !ev.end) continue;
