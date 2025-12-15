@@ -8,7 +8,7 @@
 	const numDays = parseInt(configDiv.getAttribute('data-num-days'), 10);
 	const numTimes = parseInt(configDiv.getAttribute('data-num-times'), 10);
 	const usernameInput = document.getElementById('username-input');
-	const btnUpdate = document.getElementById('btn-update-schedule');
+	// const btnUpdate = document.getElementById('btn-update-schedule');
 	const btnCalendar = document.getElementById('btn-use-calendar');
 	const btnManual = document.getElementById('btn-set-manual');
 	const grid = document.getElementById('availability-grid');
@@ -105,21 +105,66 @@
 			.catch(() => {});
 	}
 
-	// Save availability
+	// Debounced saveAvailability with optimistic UI and error handling
+	let lastMatrixSnapshot = null;
+	let saveTimeout = null;
+	function showToast(msg, isError) {
+		const toast = document.createElement('div');
+		toast.textContent = msg;
+		toast.style.position = 'fixed';
+		toast.style.bottom = '24px';
+		toast.style.right = '24px';
+		toast.style.background = isError ? '#b00' : '#222';
+		toast.style.color = '#fff';
+		toast.style.padding = '0.7em 1.2em';
+		toast.style.borderRadius = '6px';
+		toast.style.zIndex = 9999;
+		document.body.appendChild(toast);
+		setTimeout(() => toast.remove(), 2500);
+	}
+
+	function deepCloneMatrix(matrix) {
+		return matrix.map(row => row.slice());
+	}
+
+	function saveAvailabilityDebounced() {
+		if (saveTimeout) clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(saveAvailability, 300);
+	}
+
 	function saveAvailability() {
 		if (!participantId) return;
+		const matrixToSave = deepCloneMatrix(availabilityMatrix);
+		lastMatrixSnapshot = lastMatrixSnapshot || deepCloneMatrix(availabilityMatrix);
 		fetch(`/events/${eventId}/participants/${participantId}/availability`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ availability: availabilityMatrix })
+			body: JSON.stringify({ availability: matrixToSave })
 		})
 			.then(r => r.json())
 			.then(data => {
-				if (data.success) setStatus('Saved');
-				else setStatus('Failed to save', true);
-				refreshMergedAvailability();
+				if (data.success) {
+					setStatus('Saved');
+					if (data.bestTimes) renderBestTimes(data.bestTimes);
+					if (data.mergedAvailability) applyHeatmap(data.mergedAvailability);
+					lastMatrixSnapshot = null;
+				} else {
+					showToast('Failed to save. Reverting.', true);
+					if (lastMatrixSnapshot) {
+						availabilityMatrix = deepCloneMatrix(lastMatrixSnapshot);
+						renderGridFromMatrix();
+					}
+					lastMatrixSnapshot = null;
+				}
 			})
-			.catch(() => setStatus('Failed to save', true));
+			.catch(() => {
+				showToast('Failed to save. Reverting.', true);
+				if (lastMatrixSnapshot) {
+					availabilityMatrix = deepCloneMatrix(lastMatrixSnapshot);
+					renderGridFromMatrix();
+				}
+				lastMatrixSnapshot = null;
+			});
 	}
 
 	// Create or load participant
@@ -238,10 +283,7 @@
 	}
 
 	// Attach event handlers
-	if (btnUpdate) btnUpdate.addEventListener('click', function(e) {
-		e.preventDefault();
-		createOrLoadParticipant(() => saveAvailability());
-	});
+	// (btnUpdate removed)
 	if (btnManual) btnManual.addEventListener('click', function(e) {
 		e.preventDefault();
 		enableManualEdit();
@@ -263,11 +305,21 @@
 		hideModal();
 	});
 
-	// Grid cell handlers
+
+	// Grid cell handlers with auto-save
 	if (grid) {
-		grid.addEventListener('click', onCellClick);
-		grid.addEventListener('mousedown', onCellMouseDown);
-		grid.addEventListener('mouseover', onCellMouseOver);
+		grid.addEventListener('click', function(e) {
+			onCellClick(e);
+			saveAvailabilityDebounced();
+		});
+		grid.addEventListener('mousedown', function(e) {
+			onCellMouseDown(e);
+			saveAvailabilityDebounced();
+		});
+		grid.addEventListener('mouseover', function(e) {
+			onCellMouseOver(e);
+			if (isMouseDown) saveAvailabilityDebounced();
+		});
 		document.addEventListener('mouseup', onMouseUp);
 	}
 

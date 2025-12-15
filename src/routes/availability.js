@@ -12,7 +12,26 @@ router.post('/participants/:participantId/availability', express.json(), (req, r
   }
   try {
     db.saveAvailabilityMatrix(participantId, matrix);
-    return res.json({ success: true });
+    // Return updated aggregates for UI refresh
+    const eventId = req.params.id;
+    const dbEvent = require('../db');
+    const event = dbEvent.getEventById(eventId);
+    if (!event) return res.json({ success: true });
+    const timeBlocksUtil = require('../utils/timeBlocks');
+    const bestTimesUtil = require('../utils/bestTimes');
+    const gridConfig = timeBlocksUtil.buildGridConfig(event);
+    const { dateBlocks, timeBlocks, numDays, numTimes } = gridConfig;
+    const { mergedAvailability, participants } = db.getAllAvailabilityForEvent(eventId, numDays, numTimes);
+    const participantCount = participants.length;
+    const bestTimes = bestTimesUtil.findBestTimes({
+      mergedAvailability,
+      meetingDurationMinutes: 30,
+      intervalMinutes: 30,
+      dateBlocks,
+      timeBlocks,
+      participantCount
+    });
+    return res.json({ success: true, bestTimes, mergedAvailability });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Server error saving availability' });
