@@ -5,8 +5,15 @@ const fs = require('fs');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 
-// Determine DB path from env or fallback
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data.db');
+// Determine DB path for Azure or local
+let DB_PATH;
+if (process.env.DB_PATH) {
+  DB_PATH = process.env.DB_PATH;
+} else if (process.env.NODE_ENV === 'production') {
+  DB_PATH = '/home/data/data.db';
+} else {
+  DB_PATH = path.join(__dirname, '../data.db');
+}
 // Ensure parent directory exists
 const parentDir = path.dirname(DB_PATH);
 if (!fs.existsSync(parentDir)) {
@@ -164,8 +171,8 @@ function getAllAvailabilityForEvent(eventId, numDays, numTimes) {
   };
 }
 
-// Export close method for graceful shutdown
-function close() {
+// Export closeDb method for graceful shutdown
+function closeDb() {
   try { db.close(); } catch (e) {}
 }
 
@@ -178,5 +185,5 @@ module.exports = {
   saveAvailabilityMatrix,
   getAvailabilityMatrixForParticipant,
   getAllAvailabilityForEvent,
-  close
+  closeDb
 };
