@@ -1,3 +1,29 @@
+// Clear imported availability
+function clearAvailability() {
+	availabilityMatrix = Array.from({ length: numDays }, () => Array(numTimes).fill(false));
+	renderGridFromMatrix();
+	saveAvailability();
+	setStatus('Availability cleared.');
+}
+
+// Add clear button to UI
+window.addEventListener('DOMContentLoaded', function() {
+	const controls = document.querySelector('.user-controls .button-row');
+	if (controls) {
+		const clearBtn = document.createElement('button');
+		clearBtn.textContent = 'Clear imported availability';
+		clearBtn.style.background = '#bbb';
+		clearBtn.style.color = '#222';
+		clearBtn.style.fontWeight = 'normal';
+		clearBtn.style.fontSize = '0.95em';
+		clearBtn.style.marginLeft = '0.5em';
+		clearBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			clearAvailability();
+		});
+		controls.appendChild(clearBtn);
+	}
+});
 
 // Main JS for planmymeeting event page
 (function() {
@@ -10,7 +36,7 @@
 	const usernameInput = document.getElementById('username-input');
 	// const btnUpdate = document.getElementById('btn-update-schedule');
 	const btnCalendar = document.getElementById('btn-use-calendar');
-	const btnManual = document.getElementById('btn-set-manual');
+	// const btnManual = document.getElementById('btn-set-manual');
 	const grid = document.getElementById('availability-grid');
 	const statusDiv = document.getElementById('status');
 	const bestTimesDiv = document.getElementById('best-times');
@@ -195,14 +221,9 @@
 			.catch(() => setStatus('Failed to load participant', true));
 	}
 
-	// Manual editing
-	function enableManualEdit() {
-		manualEditMode = true;
-		setStatus('Manual edit enabled. Click or drag to mark your availability.');
-		// Enable grid interaction
-		if (!grid) return;
-		grid.classList.add('manual-edit');
-	}
+	// Manual editing always enabled
+	manualEditMode = true;
+	if (grid) grid.classList.add('manual-edit');
 
 	// Grid event handlers
 	function onCellClick(e) {
@@ -252,7 +273,7 @@
 	// Calendar submit
 	function submitCalendar() {
 		if (!participantId) {
-			setStatus('Please enter your name and update schedule first.', true);
+			setStatus('Please enter your name first.', true);
 			hideModal();
 			return;
 		}
@@ -284,10 +305,7 @@
 
 	// Attach event handlers
 	// (btnUpdate removed)
-	if (btnManual) btnManual.addEventListener('click', function(e) {
-		e.preventDefault();
-		enableManualEdit();
-	});
+	// (btnManual removed)
 	if (btnCalendar) btnCalendar.addEventListener('click', function(e) {
 		e.preventDefault();
 		if (!participantId) {
